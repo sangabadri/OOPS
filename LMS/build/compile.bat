@@ -1,0 +1,1 @@
+g++ -std=c++14 Headers\*.cpp LMS.cpp -o LMS.exe
