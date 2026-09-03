@@ -12,7 +12,10 @@ private:
 
 public:
     TicketManager();
-    Ticket *createTicket(Vehicle *vehicle, int floorId, int slotId);
-    Ticket *getTicket(Vehicle *vehicle);
-    bool removeTicket(Vehicle *vehicle);
+    Ticket *createTicket(string vehicleNumber, VehicleType type, int floorId, int slotId);
+    Ticket *getTicket(string vehicleNumber);
+    bool removeTicket(string vehicleNumber);
+    void addTicket(unique_ptr<Ticket> ticket);
+    void setCounter(int val);
+    int getCounter();
 };

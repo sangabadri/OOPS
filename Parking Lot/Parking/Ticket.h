@@ -1,22 +1,31 @@
 #pragma once
 
 #include "Vehicle.h"
+#include <ctime>
 
 class Ticket
 {
 private:
     int id;
-    Vehicle *vehicle;
-    int floorId;
+    string vehicleNumber;
     VehicleType vehicleType;
+    int floorId;
     int slotId;
+    time_t entryTime;
+    time_t exitTime;
+    int feeCharged;
 
 public:
-    Ticket(int id, Vehicle *vehicle, int floorId, VehicleType type, int slotId);
+    Ticket(int id, string vehicleNumber, VehicleType type, int floorId, int slotId);
+    Ticket(int id, string vehicleNumber, VehicleType type, int floorId, int slotId, time_t entryTime);
 
     int getID();
-    Vehicle *getVehicle();
+    string getVehicleNumber();
     int getFloorID();
     VehicleType getVehicleType();
     int getSlotID();
+    time_t getEntryTime();
+    time_t getExitTime();
+    int getFeeCharged();
+    void setExit(time_t exitTime, int feeCharged);
 };

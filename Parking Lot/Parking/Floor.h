@@ -18,11 +18,15 @@ public:
     int getID();
     void addSlots(VehicleType type, int count);
     void removeSlot(VehicleType type, int id);
-    int getSlotId(Vehicle *vehicle);
-    int fillSlot(Vehicle *Vehicle);
-    bool emptySlot(Vehicle *vehicle);
+    int getSlotId(VehicleType type);
+    int fillSlot(string vehicleNumber, VehicleType type, int ticketId);
+    bool emptySlot(string vehicleNumber, VehicleType type);
     bool slotAvailable(VehicleType type);
     bool containsVehicles();
     void displaySlots();
     void displayFreeSlots();
+    void loadSlot(VehicleType type, int slotId, bool occupied, string vehicleNumber, int ticketId);
+    void setCounter(VehicleType type, int val);
+    int getCounter(VehicleType type);
+    int getSlotCount(VehicleType type);
 };

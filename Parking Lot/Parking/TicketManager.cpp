@@ -5,17 +5,17 @@ TicketManager::TicketManager()
     counter = 0;
 }
 
-Ticket *TicketManager::createTicket(Vehicle *vehicle, int floorId, int slotId)
+Ticket *TicketManager::createTicket(string vehicleNumber, VehicleType type, int floorId, int slotId)
 {
-    tickets.push_back(make_unique<Ticket>(counter++, vehicle, floorId, vehicle->getType(), slotId));
+    tickets.push_back(make_unique<Ticket>(counter++, vehicleNumber, type, floorId, slotId));
     return tickets[tickets.size() - 1].get();
 }
 
-Ticket *TicketManager::getTicket(Vehicle *vehicle)
+Ticket *TicketManager::getTicket(string vehicleNumber)
 {
-    for (int i = 0; i < tickets.size(); i++)
+    for (size_t i = 0; i < tickets.size(); i++)
     {
-        if (tickets[i]->getVehicle()->getVehicleNumber() == vehicle->getVehicleNumber())
+        if (tickets[i]->getVehicleNumber() == vehicleNumber)
         {
             return tickets[i].get();
         }
@@ -23,15 +23,30 @@ Ticket *TicketManager::getTicket(Vehicle *vehicle)
     return nullptr;
 }
 
-bool TicketManager::removeTicket(Vehicle *vehicle)
+bool TicketManager::removeTicket(string vehicleNumber)
 {
-    for (int i = 0; i < tickets.size(); i++)
+    for (size_t i = 0; i < tickets.size(); i++)
     {
-        if (tickets[i]->getVehicle() == vehicle)
+        if (tickets[i]->getVehicleNumber() == vehicleNumber)
         {
             tickets.erase(tickets.begin() + i);
             return true;
         }
     }
     return false;
+}
+
+void TicketManager::addTicket(unique_ptr<Ticket> ticket)
+{
+    tickets.push_back(move(ticket));
+}
+
+void TicketManager::setCounter(int val)
+{
+    counter = val;
+}
+
+int TicketManager::getCounter()
+{
+    return counter;
 }

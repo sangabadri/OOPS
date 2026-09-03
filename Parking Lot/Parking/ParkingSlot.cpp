@@ -1,8 +1,8 @@
 #include "ParkingSlot.h"
 
-ParkingSlot::ParkingSlot(int id, VehicleType type) : id(id), allowedVehicleType(type), vehicle(nullptr) {}
+ParkingSlot::ParkingSlot(int id, VehicleType type) : id(id), allowedVehicleType(type), vehicle(nullptr), vehicleNumber(""), ticketId(-1) {}
 
-bool ParkingSlot::addVehicle(Vehicle *vehicle)
+bool ParkingSlot::addVehicle(string vehNumber, VehicleType type, int tId)
 {
     if (isOccupied())
     {
@@ -10,21 +10,24 @@ bool ParkingSlot::addVehicle(Vehicle *vehicle)
         cout << "Please use a another slot as per your vehicle type.\n";
         return false;
     }
-    if (vehicle->getType() != allowedVehicleType)
+    if (type != allowedVehicleType)
     {
         cout << "ParkingSlot " << id << " allowed vehicle type doesn't match with this vehicle.\n";
         cout << "Please use a another slot as per your vehicle type.\n";
         return false;
     }
-    this->vehicle = vehicle;
+    this->vehicleNumber = vehNumber;
+    this->ticketId = tId;
     return true;
 }
 
-bool ParkingSlot::removeVehicle(Vehicle *vehicle)
+bool ParkingSlot::removeVehicle(string vehNumber)
 {
-    if (vehicle == this->vehicle)
+    if (vehicleNumber == vehNumber)
     {
-        this->vehicle = nullptr;
+        vehicleNumber = "";
+        ticketId = -1;
+        vehicle = nullptr;
         return true;
     }
     cout << "The specified vehicle is not in this slot.\n";
@@ -33,7 +36,7 @@ bool ParkingSlot::removeVehicle(Vehicle *vehicle)
 
 bool ParkingSlot::isOccupied()
 {
-    return vehicle;
+    return !vehicleNumber.empty();
 }
 
 int ParkingSlot::getID()
@@ -49,4 +52,20 @@ VehicleType ParkingSlot::getVehicleType()
 Vehicle *ParkingSlot::getVehicle()
 {
     return vehicle;
+}
+
+string ParkingSlot::getVehicleNumber()
+{
+    return vehicleNumber;
+}
+
+int ParkingSlot::getTicketId()
+{
+    return ticketId;
+}
+
+void ParkingSlot::setOccupied(string vehNumber, int tId)
+{
+    vehicleNumber = vehNumber;
+    ticketId = tId;
 }
