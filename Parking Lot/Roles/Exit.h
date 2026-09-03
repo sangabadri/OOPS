@@ -9,6 +9,5 @@ private:
 
 public:
     Exit(ExitOperations &operations);
-
-    bool exitVehicle(Vehicle *vehicle);
+    int exitVehicle(string vehicleNumber);
 };

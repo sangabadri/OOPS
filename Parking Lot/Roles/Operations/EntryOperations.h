@@ -1,10 +1,11 @@
 #pragma once
 
 #include "../../Parking/Vehicle.h"
+#include <string>
 
 class EntryOperations
 {
 public:
-    virtual bool enterVehicle(Vehicle *vehicle) = 0;
+    virtual int enterVehicle(string vehicleNumber, VehicleType type) = 0;
     virtual ~EntryOperations() = default;
 };

@@ -9,5 +9,5 @@ private:
 
 public:
     Entry(EntryOperations &operations);
-    bool enterVehicle(Vehicle *vehicle);
+    int enterVehicle(string vehicleNumber, VehicleType type);
 };

@@ -2,7 +2,7 @@
 
 Exit::Exit(ExitOperations &operations) : operations(operations) {}
 
-bool Exit::exitVehicle(Vehicle *vehicle)
+int Exit::exitVehicle(string vehicleNumber)
 {
-    return operations.exitVehicle(vehicle);
+    return operations.exitVehicle(vehicleNumber);
 }

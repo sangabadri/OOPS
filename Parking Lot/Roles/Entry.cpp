@@ -2,7 +2,7 @@
 
 Entry::Entry(EntryOperations &operations) : operations(operations) {}
 
-bool Entry::enterVehicle(Vehicle *vehicle)
+int Entry::enterVehicle(string vehicleNumber, VehicleType type)
 {
-    return operations.enterVehicle(vehicle);
+    return operations.enterVehicle(vehicleNumber, type);
 }
