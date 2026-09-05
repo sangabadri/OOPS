@@ -19,169 +19,169 @@ void Floor::addSlots(VehicleType type, int count)
     int idx = static_cast<int>(type);
     for (int i = 0; i < count; i++)
     {
-        parkingSlots[idx].push_back(make_unique<ParkingSlot>(counter[idx]++, type));
+        int slotId = counter[idx]++;
+        parkingSlots[idx][slotId] = make_unique<ParkingSlot>(slotId, type);
     }
     freeSlots[idx] += count;
     totalSlots += count;
 }
 
-void Floor::removeSlot(VehicleType type, int id)
+OpResult Floor::removeSlot(VehicleType type, int slotId)
 {
     int idx = static_cast<int>(type);
-    for (size_t i = 0; i < parkingSlots[idx].size(); i++)
+    auto it = parkingSlots[idx].find(slotId);
+    if (it == parkingSlots[idx].end())
     {
-        if (parkingSlots[idx][i]->getID() == id)
-        {
-            if (parkingSlots[idx][i]->isOccupied())
-            {
-                cout << "ParkingSlot " << id << " is currently occupied.\n";
-                cout << "Cannot remove the slot.\n";
-                return;
-            }
-            parkingSlots[idx].erase(parkingSlots[idx].begin() + i);
-            freeSlots[idx]--;
-            totalSlots--;
-            return;
-        }
+        return {false, "Slot " + to_string(slotId) + " doesn't exist."};
     }
-    cout << "ParkingSlot " << id << " doesn't exist.\n";
+    if (it->second->isOccupied())
+    {
+        return {false, "Slot " + to_string(slotId) + " is currently occupied. Cannot remove."};
+    }
+    parkingSlots[idx].erase(it);
+    freeSlots[idx]--;
+    totalSlots--;
+    return {true, "Slot " + to_string(slotId) + " removed."};
 }
 
 int Floor::getSlotId(VehicleType type)
 {
     int idx = static_cast<int>(type);
-    for (size_t i = 0; i < parkingSlots[idx].size(); i++)
+    for (auto &pair : parkingSlots[idx])
     {
-        if (!parkingSlots[idx][i]->isOccupied())
+        if (!pair.second->isOccupied())
         {
-            return parkingSlots[idx][i]->getID();
+            return pair.first;
         }
     }
     return -1;
 }
 
-int Floor::fillSlot(string vehicleNumber, VehicleType type, int ticketId)
+OpResult Floor::fillSlot(string vehicleNumber, VehicleType type, int ticketId)
 {
     int idx = static_cast<int>(type);
-    for (size_t i = 0; i < parkingSlots[idx].size(); i++)
+    for (auto &pair : parkingSlots[idx])
     {
-        if (!parkingSlots[idx][i]->isOccupied())
+        if (!pair.second->isOccupied())
         {
-            if (!parkingSlots[idx][i]->addVehicle(vehicleNumber, type, ticketId))
-                return -1;
+            OpResult r = pair.second->addVehicle(vehicleNumber, type, ticketId);
+            if (!r.success)
+                return r;
             freeSlots[idx]--;
-            return parkingSlots[idx][i]->getID();
+            return {true, "", pair.first};
         }
     }
-    return -1;
+    return {false, "No free slot available."};
 }
 
-bool Floor::emptySlot(string vehicleNumber, VehicleType type)
+OpResult Floor::emptySlot(string vehicleNumber, VehicleType type)
 {
     int idx = static_cast<int>(type);
-    for (size_t i = 0; i < parkingSlots[idx].size(); i++)
+    for (auto &pair : parkingSlots[idx])
     {
-        if (parkingSlots[idx][i]->getVehicleNumber() == vehicleNumber)
+        if (pair.second->getVehicleNumber() == vehicleNumber)
         {
-            if (!parkingSlots[idx][i]->removeVehicle(vehicleNumber))
-                return false;
+            OpResult r = pair.second->removeVehicle(vehicleNumber);
+            if (!r.success)
+                return r;
             freeSlots[idx]++;
-            return true;
+            return {true, ""};
         }
     }
-    return false;
+    return {false, "Vehicle " + vehicleNumber + " not found on this floor."};
 }
 
 bool Floor::slotAvailable(VehicleType type)
 {
-    return freeSlots[static_cast<int>(type)];
+    return freeSlots[static_cast<int>(type)] > 0;
 }
 
 bool Floor::containsVehicles()
 {
-    int occupied = 0;
+    int free = 0;
     for (int i = 0; i < 3; i++)
     {
-        occupied += freeSlots[i];
+        free += freeSlots[i];
     }
-    return totalSlots - occupied;
+    return (totalSlots - free) > 0;
 }
 
-void Floor::displaySlots()
+string Floor::displaySlots()
 {
-    vector<string> vehicleNames = {"Bike", "Car", "Truck"};
-    cout << "\nFloor " << id << ":\n";
-    for (int type = 0; type < 3; type++)
+    ostringstream out;
+    out << "\nFloor " << id << ":\n";
+    for (int t = 0; t < 3; t++)
     {
-        int total = parkingSlots[type].size();
-        int freeCount = freeSlots[type];
+        VehicleType vt = static_cast<VehicleType>(t);
+        int total = parkingSlots[t].size();
+        int freeCount = freeSlots[t];
         int occupiedCount = total - freeCount;
-        cout << "\n"
-             << vehicleNames[type] << " Slots\n";
-        cout << "Total: " << total << " | Free: " << freeCount << " | Occupied: " << occupiedCount << "\n";
-        cout << "Slot IDs:\n";
-        if (parkingSlots[type].empty())
+        out << "\n" << vehicleTypeToString(vt) << " Slots\n";
+        out << "Total: " << total << " | Free: " << freeCount << " | Occupied: " << occupiedCount << "\n";
+        out << "Slot IDs:\n";
+        if (parkingSlots[t].empty())
         {
-            cout << "None\n";
+            out << "None\n";
             continue;
         }
-        for (size_t i = 0; i < parkingSlots[type].size(); i++)
+        for (auto &pair : parkingSlots[t])
         {
-            ParkingSlot *slot = parkingSlots[type][i].get();
-            cout << "Slot " << slot->getID();
+            ParkingSlot *slot = pair.second.get();
+            out << "Slot " << slot->getID();
             if (slot->isOccupied())
             {
-                cout << " - Occupied (" << slot->getVehicleNumber() << ")";
+                out << " - Occupied (" << slot->getVehicleNumber() << ")";
             }
             else
             {
-                cout << " - Free";
+                out << " - Free";
             }
-            cout << "\n";
+            out << "\n";
         }
     }
+    return out.str();
 }
 
-void Floor::displayFreeSlots()
+string Floor::displayFreeSlots()
 {
-    vector<string> vehicleNames = {"Bike", "Car", "Truck"};
-    cout << "\nFree Slots on Floor " << id << ":\n";
-    for (int type = 0; type < 3; type++)
+    ostringstream out;
+    out << "\nFree Slots on Floor " << id << ":\n";
+    for (int t = 0; t < 3; t++)
     {
-        cout << "\n"
-             << vehicleNames[type] << " Slots";
-        cout << " (Free: " << freeSlots[type] << ")\n";
+        VehicleType vt = static_cast<VehicleType>(t);
+        out << "\n" << vehicleTypeToString(vt) << " Slots";
+        out << " (Free: " << freeSlots[t] << ")\n";
         bool found = false;
-        for (size_t i = 0; i < parkingSlots[type].size(); i++)
+        for (auto &pair : parkingSlots[t])
         {
-            ParkingSlot *slot = parkingSlots[type][i].get();
+            ParkingSlot *slot = pair.second.get();
             if (!slot->isOccupied())
             {
-                cout << "Slot " << slot->getID() << "\n";
+                out << "Slot " << slot->getID() << "\n";
                 found = true;
             }
         }
         if (!found)
         {
-            cout << "No slots available.\n";
+            out << "No slots available.\n";
         }
     }
+    return out.str();
 }
 
 void Floor::loadSlot(VehicleType type, int slotId, bool occupied, string vehicleNumber, int ticketId)
 {
     int idx = static_cast<int>(type);
-    parkingSlots[idx].push_back(make_unique<ParkingSlot>(slotId, type));
+    parkingSlots[idx][slotId] = make_unique<ParkingSlot>(slotId, type);
     if (occupied)
     {
-        parkingSlots[idx].back()->setOccupied(vehicleNumber, ticketId);
-        totalSlots++;
+        parkingSlots[idx][slotId]->setOccupied(vehicleNumber, ticketId);
     }
     else
     {
         freeSlots[idx]++;
-        totalSlots++;
     }
+    totalSlots++;
 }
 
 void Floor::setCounter(VehicleType type, int val)

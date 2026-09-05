@@ -1,4 +1,4 @@
-#include "Vehicle.h"
+#include "VehicleType.h"
 
 string vehicleTypeToString(VehicleType type)
 {
@@ -14,16 +14,4 @@ VehicleType stringToVehicleType(string str)
     if (str == "CAR") return CAR;
     if (str == "TRUCK") return TRUCK;
     return BIKE;
-}
-
-Vehicle::Vehicle(string vehicleNumber, VehicleType type) : vehicleNumber(vehicleNumber), type(type) {}
-
-VehicleType Vehicle::getType()
-{
-    return type;
-}
-
-string Vehicle::getVehicleNumber()
-{
-    return vehicleNumber;
 }

@@ -13,15 +13,3 @@ enum VehicleType
 
 string vehicleTypeToString(VehicleType type);
 VehicleType stringToVehicleType(string str);
-
-class Vehicle
-{
-private:
-    string vehicleNumber;
-    VehicleType type;
-
-public:
-    Vehicle(string vehicleNumber, VehicleType type);
-    VehicleType getType();
-    string getVehicleNumber();
-};

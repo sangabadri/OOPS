@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vehicle.h"
+#include "VehicleType.h"
 #include <ctime>
 
 class Ticket

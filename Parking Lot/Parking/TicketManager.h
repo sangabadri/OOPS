@@ -2,13 +2,13 @@
 
 #include "Ticket.h"
 #include <memory>
-#include <vector>
+#include <unordered_map>
 
 class TicketManager
 {
 private:
     int counter;
-    vector<unique_ptr<Ticket>> tickets;
+    unordered_map<string, unique_ptr<Ticket>> tickets;
 
 public:
     TicketManager();

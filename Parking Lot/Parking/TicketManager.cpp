@@ -7,38 +7,29 @@ TicketManager::TicketManager()
 
 Ticket *TicketManager::createTicket(string vehicleNumber, VehicleType type, int floorId, int slotId)
 {
-    tickets.push_back(make_unique<Ticket>(counter++, vehicleNumber, type, floorId, slotId));
-    return tickets[tickets.size() - 1].get();
+    tickets[vehicleNumber] = make_unique<Ticket>(counter++, vehicleNumber, type, floorId, slotId);
+    return tickets[vehicleNumber].get();
 }
 
 Ticket *TicketManager::getTicket(string vehicleNumber)
 {
-    for (size_t i = 0; i < tickets.size(); i++)
+    auto it = tickets.find(vehicleNumber);
+    if (it != tickets.end())
     {
-        if (tickets[i]->getVehicleNumber() == vehicleNumber)
-        {
-            return tickets[i].get();
-        }
+        return it->second.get();
     }
     return nullptr;
 }
 
 bool TicketManager::removeTicket(string vehicleNumber)
 {
-    for (size_t i = 0; i < tickets.size(); i++)
-    {
-        if (tickets[i]->getVehicleNumber() == vehicleNumber)
-        {
-            tickets.erase(tickets.begin() + i);
-            return true;
-        }
-    }
-    return false;
+    return tickets.erase(vehicleNumber) > 0;
 }
 
 void TicketManager::addTicket(unique_ptr<Ticket> ticket)
 {
-    tickets.push_back(move(ticket));
+    string key = ticket->getVehicleNumber();
+    tickets[key] = move(ticket);
 }
 
 void TicketManager::setCounter(int val)
