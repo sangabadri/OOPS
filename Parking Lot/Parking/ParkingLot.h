@@ -36,16 +36,16 @@ private:
 
 public:
     ParkingLot();
-    void addFloor() override;
-    void removeFloor(int id) override;
-    void viewFloors() override;
-    void viewSlots(int floorId) override;
-    void viewFreeSlots(int floorId) override;
-    void amountCollected() override;
-    void addSlots(int floorId, VehicleType type, int count) override;
-    void removeSlot(int floorId, VehicleType, int slotId) override;
-    void viewRates() override;
-    void setRate(VehicleType type, int firstHourFee, int halfHourBlockFee) override;
-    int enterVehicle(string vehicleNumber, VehicleType type) override;
-    int exitVehicle(string vehicleNumber) override;
+    OpResult addFloor() override;
+    OpResult removeFloor(int id) override;
+    OpResult viewFloors() override;
+    OpResult viewSlots(int floorId) override;
+    OpResult viewFreeSlots(int floorId) override;
+    OpResult amountCollected() override;
+    OpResult addSlots(int floorId, VehicleType type, int count) override;
+    OpResult removeSlot(int floorId, VehicleType, int slotId) override;
+    OpResult viewRates() override;
+    OpResult setRate(VehicleType type, int firstHourFee, int halfHourBlockFee) override;
+    OpResult enterVehicle(string vehicleNumber, VehicleType type) override;
+    OpResult exitVehicle(string vehicleNumber) override;
 };

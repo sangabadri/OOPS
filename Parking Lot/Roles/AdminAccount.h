@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../Parking/OpResult.h"
 #include <string>
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 
@@ -17,12 +17,11 @@ private:
 
 public:
     int getUserId();
-    string getName();
     int getPrevId();
-    void updateId();
+    OpResult updateId();
     bool accountExists(int id);
-    void fetchData(int id);
-    void newUser(string name, string pass);
+    OpResult fetchData(int id);
+    OpResult newUser(string name, string pass);
     bool correctPassword(string pass);
     string encryptedPassword(string pass);
     void setPassword(string pass);

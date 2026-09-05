@@ -15,6 +15,7 @@ ParkingLot::ParkingLot()
 
 void ParkingLot::ensureDataDirs()
 {
+    // NOTE: Data/ is resolved relative to CWD. Running from outside "Parking Lot/" creates Data/ elsewhere.
     namespace fs = filesystem;
     fs::create_directories("Data/Floors");
     fs::create_directories("Data/Slots");
@@ -50,9 +51,11 @@ void ParkingLot::saveRates()
     ofstream file("Data/Rates/rates.txt");
     if (file.is_open())
     {
-        file << "BIKE " << rates[BIKE].first << " " << rates[BIKE].second << "\n";
-        file << "CAR " << rates[CAR].first << " " << rates[CAR].second << "\n";
-        file << "TRUCK " << rates[TRUCK].first << " " << rates[TRUCK].second << "\n";
+        for (int t = 0; t < 3; t++)
+        {
+            VehicleType vt = static_cast<VehicleType>(t);
+            file << vehicleTypeToString(vt) << " " << rates[vt].first << " " << rates[vt].second << "\n";
+        }
         file.close();
     }
 }
@@ -69,6 +72,7 @@ void ParkingLot::loadRevenue()
 
 void ParkingLot::saveRevenue()
 {
+    // NOTE: not safe for concurrent processes writing to this file — no locking yet.
     ofstream file("Data/Revenue/amount.txt");
     if (file.is_open())
     {
@@ -101,11 +105,10 @@ void ParkingLot::loadFromDisk()
         auto floor = make_unique<Floor>(fid);
 
         // Load slots for this floor
-        vector<string> typeNames = {"BIKE", "CAR", "TRUCK"};
         for (int t = 0; t < 3; t++)
         {
             VehicleType vt = static_cast<VehicleType>(t);
-            string slotDir = "Data/Slots/floor_" + to_string(fid) + "/" + typeNames[t];
+            string slotDir = "Data/Slots/floor_" + to_string(fid) + "/" + vehicleTypeToString(vt);
 
             // Load slot counter
             string counterFile = slotDir + "/counter.txt";
@@ -250,7 +253,7 @@ void ParkingLot::saveOpenTicket(Ticket *ticket)
         file.close();
     }
 
-    // Update ticket counter
+    // NOTE: not safe for concurrent processes writing to this file — no locking yet.
     ofstream cf("Data/Tickets/id_counter.txt");
     if (cf.is_open())
     {
@@ -261,11 +264,9 @@ void ParkingLot::saveOpenTicket(Ticket *ticket)
 
 void ParkingLot::moveTicketToClosed(Ticket *ticket, time_t exitTime, int fee)
 {
-    // Delete from open
     string openPath = "Data/Tickets/open/ticket_" + to_string(ticket->getID()) + ".txt";
     remove(openPath.c_str());
 
-    // Write to closed
     string closedPath = "Data/Tickets/closed/ticket_" + to_string(ticket->getID()) + ".txt";
     ofstream file(closedPath);
     if (file.is_open())
@@ -298,12 +299,11 @@ void ParkingLot::deleteActiveIndex(string vehicleNumber)
     remove(path.c_str());
 }
 
-void ParkingLot::addFloor()
+OpResult ParkingLot::addFloor()
 {
     namespace fs = filesystem;
     floors.push_back(make_unique<Floor>(counter));
 
-    // Persist floor marker
     string floorFile = "Data/Floors/floor_" + to_string(counter) + ".txt";
     ofstream ff(floorFile);
     if (ff.is_open())
@@ -312,13 +312,12 @@ void ParkingLot::addFloor()
         ff.close();
     }
 
-    // Create slot subdirectories
-    vector<string> typeNames = {"BIKE", "CAR", "TRUCK"};
-    for (auto &tn : typeNames)
+    for (int t = 0; t < 3; t++)
     {
-        string dir = "Data/Slots/floor_" + to_string(counter) + "/" + tn;
+        VehicleType vt = static_cast<VehicleType>(t);
+        string dir = "Data/Slots/floor_" + to_string(counter) + "/" + vehicleTypeToString(vt);
         fs::create_directories(dir);
-        // Initialize counter
+        // NOTE: not safe for concurrent processes writing to this file — no locking yet.
         ofstream cf(dir + "/counter.txt");
         if (cf.is_open())
         {
@@ -327,9 +326,10 @@ void ParkingLot::addFloor()
         }
     }
 
+    int newFloorId = counter;
     counter++;
 
-    // Update floor counter
+    // NOTE: not safe for concurrent processes writing to this file — no locking yet.
     ofstream cf("Data/Floors/id_counter.txt");
     if (cf.is_open())
     {
@@ -337,10 +337,10 @@ void ParkingLot::addFloor()
         cf.close();
     }
 
-    cout << "Floor " << (counter - 1) << " added successfully.\n";
+    return {true, "Floor " + to_string(newFloorId) + " added successfully.", newFloorId};
 }
 
-void ParkingLot::removeFloor(int id)
+OpResult ParkingLot::removeFloor(int id)
 {
     namespace fs = filesystem;
     for (size_t i = 0; i < floors.size(); i++)
@@ -349,15 +349,12 @@ void ParkingLot::removeFloor(int id)
         {
             if (floors[i]->containsVehicles())
             {
-                cout << "Floor " << id << " contains vehicles. Cannot be removed.\n";
-                return;
+                return {false, "Floor " + to_string(id) + " contains vehicles. Cannot be removed."};
             }
 
-            // Delete floor marker
             string floorFile = "Data/Floors/floor_" + to_string(id) + ".txt";
             remove(floorFile.c_str());
 
-            // Delete slot directory
             string slotDir = "Data/Slots/floor_" + to_string(id);
             if (fs::exists(slotDir))
             {
@@ -365,61 +362,59 @@ void ParkingLot::removeFloor(int id)
             }
 
             floors.erase(floors.begin() + i);
-            cout << "Floor " << id << " removed successfully.\n";
-            return;
+            return {true, "Floor " + to_string(id) + " removed successfully."};
         }
     }
-    cout << "Floor " << id << " doesn't exist.\n";
+    return {false, "Floor " + to_string(id) + " doesn't exist."};
 }
 
-void ParkingLot::viewFloors()
+OpResult ParkingLot::viewFloors()
 {
     if (floors.empty())
     {
-        cout << "No floors available.\n";
-        return;
+        return {true, "No floors available."};
     }
-    cout << "\n===== Available Floors =====\n";
+    ostringstream out;
+    out << "\n===== Available Floors =====\n";
     for (size_t i = 0; i < floors.size(); i++)
     {
-        cout << "Floor ID: " << floors[i]->getID() << "\n";
+        out << "Floor ID: " << floors[i]->getID() << "\n";
     }
+    return {true, out.str()};
 }
 
-void ParkingLot::viewSlots(int floorId)
+OpResult ParkingLot::viewSlots(int floorId)
 {
     for (size_t i = 0; i < floors.size(); i++)
     {
         if (floors[i]->getID() == floorId)
         {
-            cout << "\n===== Floor Slot Details =====\n";
-            floors[i]->displaySlots();
-            return;
+            string header = "\n===== Floor Slot Details =====\n";
+            return {true, header + floors[i]->displaySlots()};
         }
     }
-    cout << "Floor " << floorId << " doesn't exist.\n";
+    return {false, "Floor " + to_string(floorId) + " doesn't exist."};
 }
 
-void ParkingLot::viewFreeSlots(int floorId)
+OpResult ParkingLot::viewFreeSlots(int floorId)
 {
     for (size_t i = 0; i < floors.size(); i++)
     {
         if (floors[i]->getID() == floorId)
         {
-            cout << "\n===== Floor Slot Details =====\n";
-            floors[i]->displayFreeSlots();
-            return;
+            string header = "\n===== Floor Slot Details =====\n";
+            return {true, header + floors[i]->displayFreeSlots()};
         }
     }
-    cout << "Floor " << floorId << " doesn't exist.\n";
+    return {false, "Floor " + to_string(floorId) + " doesn't exist."};
 }
 
-void ParkingLot::amountCollected()
+OpResult ParkingLot::amountCollected()
 {
-    cout << "Total revenue collected: " << amount << "\n";
+    return {true, "Total revenue collected: " + to_string(amount)};
 }
 
-void ParkingLot::addSlots(int floorId, VehicleType type, int count)
+OpResult ParkingLot::addSlots(int floorId, VehicleType type, int count)
 {
     for (size_t i = 0; i < floors.size(); i++)
     {
@@ -428,13 +423,12 @@ void ParkingLot::addSlots(int floorId, VehicleType type, int count)
             int startId = floors[i]->getCounter(type);
             floors[i]->addSlots(type, count);
 
-            // Persist each new slot
             for (int s = startId; s < startId + count; s++)
             {
                 saveSlotFile(floorId, type, s, false, "", -1);
             }
 
-            // Update slot counter file
+            // NOTE: not safe for concurrent processes writing to this file — no locking yet.
             string dir = "Data/Slots/floor_" + to_string(floorId) + "/" + vehicleTypeToString(type);
             filesystem::create_directories(dir);
             ofstream cf(dir + "/counter.txt");
@@ -444,107 +438,99 @@ void ParkingLot::addSlots(int floorId, VehicleType type, int count)
                 cf.close();
             }
 
-            cout << count << " " << vehicleTypeToString(type) << " slots added to Floor " << floorId << ".\n";
-            return;
+            return {true, to_string(count) + " " + vehicleTypeToString(type) + " slots added to Floor " + to_string(floorId) + "."};
         }
     }
-    cout << "Floor " << floorId << " doesn't exist.\n";
+    return {false, "Floor " + to_string(floorId) + " doesn't exist."};
 }
 
-void ParkingLot::removeSlot(int floorId, VehicleType type, int slotId)
+OpResult ParkingLot::removeSlot(int floorId, VehicleType type, int slotId)
 {
     for (size_t i = 0; i < floors.size(); i++)
     {
         if (floors[i]->getID() == floorId)
         {
             int prevCount = floors[i]->getSlotCount(type);
-            floors[i]->removeSlot(type, slotId);
-            if (floors[i]->getSlotCount(type) < prevCount)
+            OpResult r = floors[i]->removeSlot(type, slotId);
+            if (r.success && floors[i]->getSlotCount(type) < prevCount)
             {
                 deleteSlotFile(floorId, type, slotId);
             }
-            return;
+            return r;
         }
     }
-    cout << "Floor " << floorId << " doesn't exist.\n";
+    return {false, "Floor " + to_string(floorId) + " doesn't exist."};
 }
 
-void ParkingLot::viewRates()
+OpResult ParkingLot::viewRates()
 {
-    cout << "\n===== Parking Rates =====\n";
-    vector<string> typeNames = {"BIKE", "CAR", "TRUCK"};
+    ostringstream out;
+    out << "\n===== Parking Rates =====\n";
     for (int t = 0; t < 3; t++)
     {
         VehicleType vt = static_cast<VehicleType>(t);
-        cout << typeNames[t] << ": First Hour = " << rates[vt].first << ", Per 30min Block = " << rates[vt].second << "\n";
+        out << vehicleTypeToString(vt) << ": First Hour = " << rates[vt].first << ", Per 30min Block = " << rates[vt].second << "\n";
     }
+    return {true, out.str()};
 }
 
-void ParkingLot::setRate(VehicleType type, int firstHourFee, int halfHourBlockFee)
+OpResult ParkingLot::setRate(VehicleType type, int firstHourFee, int halfHourBlockFee)
 {
     rates[type] = {firstHourFee, halfHourBlockFee};
     saveRates();
-    cout << "Rate updated for " << vehicleTypeToString(type) << ".\n";
+    return {true, "Rate updated for " + vehicleTypeToString(type) + "."};
 }
 
-int ParkingLot::enterVehicle(string vehicleNumber, VehicleType type)
+OpResult ParkingLot::enterVehicle(string vehicleNumber, VehicleType type)
 {
     if (vehicleNumber.empty())
     {
-        cout << "Invalid vehicle.\n";
-        return -1;
+        return {false, "Invalid vehicle number."};
     }
     if (ticketManager.getTicket(vehicleNumber) != nullptr)
     {
-        cout << "Vehicle " << vehicleNumber << " is already parked.\n";
-        return -1;
+        return {false, "Vehicle " + vehicleNumber + " is already parked."};
     }
     for (size_t i = 0; i < floors.size(); i++)
     {
         if (floors[i]->slotAvailable(type))
         {
-            // Find the slot ID first
             int slotId = floors[i]->getSlotId(type);
             if (slotId == -1)
                 continue;
 
-            // Create ticket with correct slot ID
             Ticket *ticket = ticketManager.createTicket(vehicleNumber, type, floors[i]->getID(), slotId);
 
-            // Fill the slot
-            int filledSlotId = floors[i]->fillSlot(vehicleNumber, type, ticket->getID());
-            if (filledSlotId == -1)
+            OpResult fillResult = floors[i]->fillSlot(vehicleNumber, type, ticket->getID());
+            if (!fillResult.success)
             {
                 ticketManager.removeTicket(vehicleNumber);
                 continue;
             }
 
-            // Persist
+            int filledSlotId = fillResult.value;
+
             saveOpenTicket(ticket);
             writeActiveIndex(vehicleNumber, ticket->getID());
             saveSlotFile(floors[i]->getID(), type, filledSlotId, true, vehicleNumber, ticket->getID());
 
-            cout << "Vehicle " << vehicleNumber << " parked. Ticket ID: " << ticket->getID() << "\n";
-            return ticket->getID();
+            return {true, "Vehicle " + vehicleNumber + " parked. Ticket ID: " + to_string(ticket->getID()), ticket->getID()};
         }
     }
-    cout << "No parking slot available for vehicle " << vehicleNumber << ".\n";
-    return -1;
+    return {false, "No parking slot available for vehicle " + vehicleNumber + "."};
 }
 
-int ParkingLot::exitVehicle(string vehicleNumber)
+OpResult ParkingLot::exitVehicle(string vehicleNumber)
 {
     if (vehicleNumber.empty())
     {
-        cout << "Invalid vehicle.\n";
-        return 0;
+        return {false, "Invalid vehicle number."};
     }
 
     Ticket *ticket = ticketManager.getTicket(vehicleNumber);
     if (ticket == nullptr)
     {
-        cout << "Vehicle " << vehicleNumber << " is not parked in the lot.\n";
-        return 0;
+        return {false, "Vehicle " + vehicleNumber + " is not parked in the lot."};
     }
 
     time_t exitTime = time(nullptr);
@@ -561,7 +547,6 @@ int ParkingLot::exitVehicle(string vehicleNumber)
         fee += (int)ceil((minutesElapsed - 60) / 30.0) * halfHourBlockFee;
     }
 
-    // Free the slot
     int floorId = ticket->getFloorID();
     int slotId = ticket->getSlotID();
     for (size_t i = 0; i < floors.size(); i++)
@@ -574,17 +559,15 @@ int ParkingLot::exitVehicle(string vehicleNumber)
         }
     }
 
-    // Move ticket to closed
     ticket->setExit(exitTime, fee);
     moveTicketToClosed(ticket, exitTime, fee);
     deleteActiveIndex(vehicleNumber);
 
-    // Update revenue
+    // NOTE: not safe for concurrent processes writing to this file — no locking yet.
     amount += fee;
     saveRevenue();
 
-    // Remove from in-memory ticket manager
     ticketManager.removeTicket(vehicleNumber);
 
-    return fee;
+    return {true, "Vehicle " + vehicleNumber + " exited. Fee charged: " + to_string(fee), fee};
 }

@@ -5,11 +5,6 @@ int AdminAccount::getUserId()
     return UserId;
 }
 
-string AdminAccount::getName()
-{
-    return name;
-}
-
 int AdminAccount::getPrevId()
 {
     string filename = "Data/Users/Admin/id_counter.txt";
@@ -27,20 +22,18 @@ int AdminAccount::getPrevId()
     return prevId;
 }
 
-void AdminAccount::updateId()
+OpResult AdminAccount::updateId()
 {
+    // NOTE: not safe for concurrent processes writing to this file — no locking yet.
     string filename = "Data/Users/Admin/id_counter.txt";
     ofstream file(filename);
     if (file.is_open())
     {
         file << UserId;
         file.close();
+        return {true, ""};
     }
-    else
-    {
-        cout << "\nSomething went wrong while updating Id. AdminAccount.updateId.\n\n";
-    }
-    return;
+    return {false, "Failed to update admin ID counter."};
 }
 
 bool AdminAccount::accountExists(int id)
@@ -55,7 +48,7 @@ bool AdminAccount::accountExists(int id)
     return false;
 }
 
-void AdminAccount::fetchData(int id)
+OpResult AdminAccount::fetchData(int id)
 {
     string filename = "Data/Users/Admin/user_" + to_string(id) + ".txt";
     ifstream file(filename);
@@ -68,15 +61,12 @@ void AdminAccount::fetchData(int id)
         getline(file, temp);
         fetchPassword(temp);
         file.close();
+        return {true, ""};
     }
-    else
-    {
-        cout << "\nSomething went wrong while fetching data. AdminAccount.fetchData.\n\n";
-    }
-    return;
+    return {false, "Failed to load account data."};
 }
 
-void AdminAccount::newUser(string name, string pass)
+OpResult AdminAccount::newUser(string name, string pass)
 {
     filesystem::create_directories("Data/Users/Admin");
     int Id = getPrevId();
@@ -94,20 +84,15 @@ void AdminAccount::newUser(string name, string pass)
              << this->name << "\n"
              << password;
         file.close();
-        cout << "\nAdmin account created!\n";
-        cout << "Your UserId : " << UserId << "\n";
-        cout << "Remember this UserId, you will have to login using this.\n\n";
-    }
-    else
-    {
-        cout << "\nSomething went wrong while creating a new user. AdminAccount.newUser.\n\n";
+
+        UserId = Id + 1;
+        updateId();
+        UserId = Id;
+
+        return {true, "Admin account created! Your UserId: " + to_string(Id) + "\nRemember this UserId, you will have to login using this.", Id};
     }
 
-    UserId = Id + 1;
-    updateId();
-    UserId = Id;
-
-    return;
+    return {false, "Failed to create admin account."};
 }
 
 bool AdminAccount::correctPassword(string pass)
@@ -125,25 +110,14 @@ string AdminAccount::encryptedPassword(string pass)
 void AdminAccount::setPassword(string pass)
 {
     password = encryptedPassword(pass);
-    return;
 }
 
 void AdminAccount::fetchPassword(string pass)
 {
     password = pass;
-    return;
 }
 
 bool AdminAccount::anyAccountExists()
 {
-    string filename = "Data/Users/Admin/id_counter.txt";
-    ifstream file(filename);
-    if (file.is_open())
-    {
-        int id;
-        file >> id;
-        file.close();
-        return id > 100;
-    }
-    return false;
+    return AdminAccount().getPrevId() > 100;
 }
