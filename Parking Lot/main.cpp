@@ -3,6 +3,7 @@
 #include "Roles/Entry.h"
 #include "Roles/Exit.h"
 #include "Roles/AdminAccount.h"
+#include "InputUtil.h"
 #include <iostream>
 #include <string>
 
@@ -10,7 +11,7 @@ using namespace std;
 
 void MainMenu();
 void AdminLogin(Admin &admin);
-void AdminBootstrap();
+void createAdminAccount();
 void AdminRoles(Admin &admin);
 void EntryRoles(Entry &entry);
 void ExitRoles(Exit &exitOperator);
@@ -30,8 +31,7 @@ void MainMenu()
     Entry entry(parkingLot);
     Exit exitOperator(parkingLot);
 
-    int role;
-    do
+    while (true)
     {
         cout << "================================\n";
         cout << "       PARKING LOT SYSTEM\n";
@@ -49,8 +49,7 @@ void MainMenu()
         }
 
         cout << "4. Exit\n";
-        cout << "Enter choice: ";
-        cin >> role;
+        int role = readInt("Enter choice: ");
 
         if (role == 1)
         {
@@ -68,7 +67,7 @@ void MainMenu()
             }
             else
             {
-                AdminBootstrap();
+                createAdminAccount();
             }
         }
         else if (role == 4)
@@ -79,100 +78,91 @@ void MainMenu()
         {
             cout << "Role not available.\n";
         }
-    } while (true);
+    }
 }
 
-void AdminBootstrap()
+void createAdminAccount()
 {
-    cout << "\n===== Create First Admin Account =====\n";
+    cout << "\n===== Create Admin Account =====\n";
     string name, pass;
-    cout << "Enter your name: ";
+    cout << "Enter name: ";
     cin >> name;
     cout << "Enter password: ";
     cin >> pass;
     AdminAccount acc;
-    acc.newUser(name, pass);
+    OpResult r = acc.newUser(name, pass);
+    cout << r.message << "\n";
 }
 
 void AdminLogin(Admin &admin)
 {
     AdminAccount acc;
-    string id;
-    string pass;
-    int i;
+    int userId = -1;
 
-    i = 0;
-    while (i < 3)
-    {
+    bool idOk = retryLoop(3, [&](int attempt, int maxAttempts) -> bool {
+        string id;
+        cout << "Enter your UserId : ";
+        cin >> id;
+        cout << "\n";
+
+        int parsed;
         try
         {
-            cout << "Enter your UserId : ";
-            cin >> id;
-            cout << "\n";
-            stoi(id);
+            parsed = stoi(id);
         }
         catch (...)
         {
-            i++;
-            if (i == 3)
-            {
+            if (attempt == maxAttempts)
                 cout << "\nInvalid input.";
-            }
             else
-            {
                 cout << "\nInvalid input. Try again.\n\n";
-            }
-            continue;
+            return false;
         }
-        if (acc.accountExists(stoi(id)))
+
+        if (acc.accountExists(parsed))
         {
-            acc.fetchData(stoi(id));
-            break;
+            acc.fetchData(parsed);
+            userId = parsed;
+            return true;
         }
         else
         {
-            i++;
-            if (i == 3)
-            {
+            if (attempt == maxAttempts)
                 cout << "\nUserId doesn't exist.";
-            }
             else
-            {
                 cout << "\nUserId doesn't exist. Try again.\n\n";
-            }
+            return false;
         }
-    }
-    if (i == 3)
+    });
+
+    if (!idOk)
     {
         cout << "\nToo many failed attempts.";
         cout << "\nSession ended.\n\n";
         return;
     }
 
-    i = 0;
-    while (i < 3)
-    {
+    bool passOk = retryLoop(3, [&](int attempt, int maxAttempts) -> bool {
+        string pass;
         cout << "Enter your password : ";
         cin >> pass;
         cout << "\n";
+
         if (acc.correctPassword(pass))
         {
-            break;
+            return true;
         }
         else
         {
-            i++;
-            if (i == 3)
-            {
+            if (attempt == maxAttempts)
                 cout << "\nIncorrect Password.";
-            }
             else
-            {
                 cout << "\nIncorrect Password. Try again.\n\n";
-            }
+            return false;
         }
-    }
-    if (i == 3)
+    });
+
+    if (!passOk)
     {
         cout << "\nToo many failed attempts.";
         cout << "\nSession ended.\n\n";
@@ -185,8 +175,7 @@ void AdminLogin(Admin &admin)
 
 void AdminRoles(Admin &admin)
 {
-    int choice;
-    do
+    while (true)
     {
         cout << "\n===== Admin Menu =====\n";
         cout << "1. Add Floor\n";
@@ -201,8 +190,7 @@ void AdminRoles(Admin &admin)
         cout << "10. View Revenue\n";
         cout << "11. Create Admin Account\n";
         cout << "12. Logout\n";
-        cout << "Enter choice: ";
-        cin >> choice;
+        int choice = readInt("Enter choice: ");
 
         if (choice == 1)
         {
@@ -210,31 +198,21 @@ void AdminRoles(Admin &admin)
         }
         else if (choice == 2)
         {
-            int floorId, typeChoice, count;
-            cout << "Floor ID: ";
-            cin >> floorId;
-            cout << "Vehicle Type (0-Bike, 1-Car, 2-Truck): ";
-            cin >> typeChoice;
-            cout << "Count: ";
-            cin >> count;
+            int floorId = readInt("Floor ID: ");
+            int typeChoice = readInt("Vehicle Type (0-Bike, 1-Car, 2-Truck): ", 0, 2);
+            int count = readInt("Count: ");
             admin.addSlots(floorId, static_cast<VehicleType>(typeChoice), count);
         }
         else if (choice == 3)
         {
-            int floorId;
-            cout << "Floor ID: ";
-            cin >> floorId;
+            int floorId = readInt("Floor ID: ");
             admin.removeFloor(floorId);
         }
         else if (choice == 4)
         {
-            int floorId, typeChoice, slotId;
-            cout << "Floor ID: ";
-            cin >> floorId;
-            cout << "Vehicle Type (0-Bike, 1-Car, 2-Truck): ";
-            cin >> typeChoice;
-            cout << "Slot ID: ";
-            cin >> slotId;
+            int floorId = readInt("Floor ID: ");
+            int typeChoice = readInt("Vehicle Type (0-Bike, 1-Car, 2-Truck): ", 0, 2);
+            int slotId = readInt("Slot ID: ");
             admin.removeSlot(floorId, static_cast<VehicleType>(typeChoice), slotId);
         }
         else if (choice == 5)
@@ -243,16 +221,12 @@ void AdminRoles(Admin &admin)
         }
         else if (choice == 6)
         {
-            int floorId;
-            cout << "Floor ID: ";
-            cin >> floorId;
+            int floorId = readInt("Floor ID: ");
             admin.viewSlots(floorId);
         }
         else if (choice == 7)
         {
-            int floorId;
-            cout << "Floor ID: ";
-            cin >> floorId;
+            int floorId = readInt("Floor ID: ");
             admin.viewFreeSlots(floorId);
         }
         else if (choice == 8)
@@ -261,13 +235,9 @@ void AdminRoles(Admin &admin)
         }
         else if (choice == 9)
         {
-            int typeChoice, firstHour, halfHour;
-            cout << "Vehicle Type (0-Bike, 1-Car, 2-Truck): ";
-            cin >> typeChoice;
-            cout << "First Hour Fee: ";
-            cin >> firstHour;
-            cout << "Per 30-min Block Fee: ";
-            cin >> halfHour;
+            int typeChoice = readInt("Vehicle Type (0-Bike, 1-Car, 2-Truck): ", 0, 2);
+            int firstHour = readInt("First Hour Fee: ");
+            int halfHour = readInt("Per 30-min Block Fee: ");
             admin.setRate(static_cast<VehicleType>(typeChoice), firstHour, halfHour);
         }
         else if (choice == 10)
@@ -276,14 +246,7 @@ void AdminRoles(Admin &admin)
         }
         else if (choice == 11)
         {
-            cout << "\nCreating a new Admin account.\n";
-            string name, pass;
-            cout << "Enter name: ";
-            cin >> name;
-            cout << "Enter password: ";
-            cin >> pass;
-            AdminAccount newAcc;
-            newAcc.newUser(name, pass);
+            createAdminAccount();
         }
         else if (choice == 12)
         {
@@ -294,28 +257,22 @@ void AdminRoles(Admin &admin)
         {
             cout << "Invalid choice.\n";
         }
-    } while (true);
+    }
 }
 
 void EntryRoles(Entry &entry)
 {
-    int choice;
-    do
+    while (true)
     {
         cout << "\n===== Entry Operator =====\n";
         cout << "1. Park Vehicle\n";
         cout << "2. Logout\n";
-        cout << "Enter choice: ";
-        cin >> choice;
+        int choice = readInt("Enter choice: ");
 
         if (choice == 1)
         {
-            string vehicleNumber;
-            int typeChoice;
-            cout << "Vehicle Number: ";
-            cin >> vehicleNumber;
-            cout << "Vehicle Type (0-Bike, 1-Car, 2-Truck): ";
-            cin >> typeChoice;
+            string vehicleNumber = readSafeToken("Vehicle Number: ");
+            int typeChoice = readInt("Vehicle Type (0-Bike, 1-Car, 2-Truck): ", 0, 2);
             entry.enterVehicle(vehicleNumber, static_cast<VehicleType>(typeChoice));
         }
         else if (choice == 2)
@@ -327,30 +284,22 @@ void EntryRoles(Entry &entry)
         {
             cout << "Invalid choice.\n";
         }
-    } while (true);
+    }
 }
 
 void ExitRoles(Exit &exitOperator)
 {
-    int choice;
-    do
+    while (true)
     {
         cout << "\n===== Exit Operator =====\n";
         cout << "1. Process Vehicle Exit\n";
         cout << "2. Logout\n";
-        cout << "Enter choice: ";
-        cin >> choice;
+        int choice = readInt("Enter choice: ");
 
         if (choice == 1)
         {
-            string vehicleNumber;
-            cout << "Vehicle Number: ";
-            cin >> vehicleNumber;
-            int fee = exitOperator.exitVehicle(vehicleNumber);
-            if (fee > 0)
-            {
-                cout << "Fee charged: " << fee << "\n";
-            }
+            string vehicleNumber = readSafeToken("Vehicle Number: ");
+            exitOperator.exitVehicle(vehicleNumber);
         }
         else if (choice == 2)
         {
@@ -361,5 +310,5 @@ void ExitRoles(Exit &exitOperator)
         {
             cout << "Invalid choice.\n";
         }
-    } while (true);
+    }
 }
