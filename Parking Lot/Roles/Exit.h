@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Operations/ExitOperations.h"
+#include <iostream>
 
 class Exit
 {
@@ -9,5 +10,5 @@ private:
 
 public:
     Exit(ExitOperations &operations);
-    int exitVehicle(string vehicleNumber);
+    OpResult exitVehicle(string vehicleNumber);
 };

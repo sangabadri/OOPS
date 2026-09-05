@@ -2,7 +2,9 @@
 
 Entry::Entry(EntryOperations &operations) : operations(operations) {}
 
-int Entry::enterVehicle(string vehicleNumber, VehicleType type)
+OpResult Entry::enterVehicle(string vehicleNumber, VehicleType type)
 {
-    return operations.enterVehicle(vehicleNumber, type);
+    OpResult r = operations.enterVehicle(vehicleNumber, type);
+    cout << r.message << "\n";
+    return r;
 }

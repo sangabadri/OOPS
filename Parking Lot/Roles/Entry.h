@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Operations/EntryOperations.h"
+#include <iostream>
 
 class Entry
 {
@@ -9,5 +10,5 @@ private:
 
 public:
     Entry(EntryOperations &operations);
-    int enterVehicle(string vehicleNumber, VehicleType type);
+    OpResult enterVehicle(string vehicleNumber, VehicleType type);
 };

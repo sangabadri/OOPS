@@ -2,7 +2,9 @@
 
 Exit::Exit(ExitOperations &operations) : operations(operations) {}
 
-int Exit::exitVehicle(string vehicleNumber)
+OpResult Exit::exitVehicle(string vehicleNumber)
 {
-    return operations.exitVehicle(vehicleNumber);
+    OpResult r = operations.exitVehicle(vehicleNumber);
+    cout << r.message << "\n";
+    return r;
 }

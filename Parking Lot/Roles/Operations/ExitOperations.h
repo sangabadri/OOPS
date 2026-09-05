@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../../Parking/Vehicle.h"
+#include "../../Parking/VehicleType.h"
+#include "../../Parking/OpResult.h"
 #include <string>
 
 class ExitOperations
 {
 public:
-    virtual int exitVehicle(string vehicleNumber) = 0;
+    virtual OpResult exitVehicle(string vehicleNumber) = 0;
     virtual ~ExitOperations() = default;
 };
